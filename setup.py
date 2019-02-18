@@ -9,6 +9,7 @@ setup(
     version=version,
     description="",
     long_description="""Goodnight Environment""",
+    long_description_content_type='text/x-rst',
     classifiers=[],
     keywords='environment',
     author='Oscar Eriksson',
