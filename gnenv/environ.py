@@ -164,23 +164,23 @@ class GNEnvironment(object):
         self.event_handlers = dict()
 
 
-def find_config(config_paths: list) -> tuple:
+def find_config(config_path: str = None) -> tuple:
     default_paths = ["config.yaml", "config.json"]
     config_dict = dict()
-    config_path = None
 
-    if config_paths is None:
-        config_paths = default_paths
+    if config_path is None:
+        config_path = os.getcwd()
 
-    for conf in config_paths:
-        path = os.path.join(os.getcwd(), conf)
+    for conf in default_paths:
+        path = os.path.join(config_path, conf)
+        logger.info('config path: {}'.format(path))
 
         if not os.path.isfile(path):
             continue
 
         try:
             if conf.endswith(".yaml"):
-                config_dict = yaml.load(open(path))
+                config_dict = yaml.safe_load(open(path))
             elif conf.endswith(".json"):
                 config_dict = json.load(open(path))
             else:
@@ -193,19 +193,23 @@ def find_config(config_paths: list) -> tuple:
         break
 
     if not config_dict:
-        raise RuntimeError('No configuration found: {0}\n'.format(', '.join(config_paths)))
+        raise RuntimeError('No configuration found: {0}/[{0}]\n'.format(config_path, ', '.join(default_paths)))
 
     return config_dict, config_path
 
 
-def load_secrets_file(config_dict: dict) -> dict:
+def load_secrets_file(config_dict: dict, secrets_path: str = None) -> dict:
     from string import Template
     import ast
 
     gn_env = os.getenv(ENV_KEY_ENVIRONMENT)
-    secrets_path = os.getenv(ENV_KEY_SECRETS)
+
     if secrets_path is None:
-        secrets_path = 'secrets/%s.yaml' % gn_env
+        secrets_path = os.getenv(ENV_KEY_SECRETS)
+        if secrets_path is None:
+            secrets_path = 'secrets/{}.yaml'.format(gn_env)
+    else:
+        secrets_path = '{}/{}.yaml'.format(secrets_path, gn_env)
 
     logger.debug('loading secrets file "%s"' % secrets_path)
 
@@ -215,7 +219,7 @@ def load_secrets_file(config_dict: dict) -> dict:
 
     if os.path.isfile(secrets_path):
         try:
-            secrets = yaml.load(open(secrets_path))
+            secrets = yaml.safe_load(open(secrets_path))
         except Exception as e:
             raise RuntimeError("Failed to open secrets configuration {0}: {1}".format(secrets_path, str(e)))
         template = Template(template)
@@ -224,7 +228,7 @@ def load_secrets_file(config_dict: dict) -> dict:
     return ast.literal_eval(template)
 
 
-def create_env(config_paths: list = None, gn_environment: str = None) -> GNEnvironment:
+def create_env(config_path: str = None, gn_environment: str = None, secrets_path: str = None) -> GNEnvironment:
     logging.basicConfig(level='DEBUG', format=DefaultConfigKeys.DEFAULT_LOG_FORMAT)
 
     if gn_environment is None:
@@ -237,8 +241,8 @@ def create_env(config_paths: list = None, gn_environment: str = None) -> GNEnvir
         logger.debug('no environment found, assuming tests are running')
         return GNEnvironment(None, ConfigDict(dict()))
 
-    config_dict, config_path = find_config(config_paths)
-    config_dict = load_secrets_file(config_dict)
+    config_dict, config_path = find_config(config_path)
+    config_dict = load_secrets_file(config_dict, secrets_path=secrets_path)
 
     config_dict[DefaultConfigKeys.ENVIRONMENT] = gn_environment
     log_level = config_dict.get(DefaultConfigKeys.LOG_LEVEL, DefaultConfigKeys.DEFAULT_LOG_LEVEL)

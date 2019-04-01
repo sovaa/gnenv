@@ -2,7 +2,7 @@
 
 from setuptools import setup, find_packages
 
-version = '0.1.2-dev'
+version = '0.1.2'
 
 setup(
     name='gnenv',
