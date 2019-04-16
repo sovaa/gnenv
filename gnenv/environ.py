@@ -198,11 +198,14 @@ def find_config(config_path: str = None) -> tuple:
     return config_dict, config_path
 
 
-def load_secrets_file(config_dict: dict, secrets_path: str = None) -> dict:
+def load_secrets_file(config_dict: dict, secrets_path: str = None, env_name: str = None) -> dict:
     from string import Template
     import ast
 
-    gn_env = os.getenv(ENV_KEY_ENVIRONMENT)
+    if env_name is None:
+        gn_env = os.getenv(ENV_KEY_ENVIRONMENT)
+    else:
+        gn_env = env_name
 
     if secrets_path is None:
         secrets_path = os.getenv(ENV_KEY_SECRETS)
@@ -228,8 +231,17 @@ def load_secrets_file(config_dict: dict, secrets_path: str = None) -> dict:
     return ast.literal_eval(template)
 
 
-def create_env(config_path: str = None, gn_environment: str = None, secrets_path: str = None) -> GNEnvironment:
-    logging.basicConfig(level='DEBUG', format=DefaultConfigKeys.DEFAULT_LOG_FORMAT)
+def create_env(
+        config_path: str = None,
+        gn_environment: str = None,
+        secrets_path: str = None,
+        quiet: bool = False
+) -> GNEnvironment:
+
+    if quiet:
+        logging.basicConfig(level='ERROR', format=DefaultConfigKeys.DEFAULT_LOG_FORMAT)
+    else:
+        logging.basicConfig(level='DEBUG', format=DefaultConfigKeys.DEFAULT_LOG_FORMAT)
 
     if gn_environment is None:
         gn_environment = os.getenv(ENV_KEY_ENVIRONMENT)
@@ -242,7 +254,7 @@ def create_env(config_path: str = None, gn_environment: str = None, secrets_path
         return GNEnvironment(None, ConfigDict(dict()))
 
     config_dict, config_path = find_config(config_path)
-    config_dict = load_secrets_file(config_dict, secrets_path=secrets_path)
+    config_dict = load_secrets_file(config_dict, secrets_path=secrets_path, env_name=gn_environment)
 
     config_dict[DefaultConfigKeys.ENVIRONMENT] = gn_environment
     log_level = config_dict.get(DefaultConfigKeys.LOG_LEVEL, DefaultConfigKeys.DEFAULT_LOG_LEVEL)
