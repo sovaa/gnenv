@@ -180,9 +180,11 @@ def find_config(config_path: str = None) -> tuple:
 
         try:
             if conf.endswith(".yaml"):
-                config_dict = yaml.safe_load(open(path))
+                with open(path) as f:
+                    config_dict = yaml.safe_load(f)
             elif conf.endswith(".json"):
-                config_dict = json.load(open(path))
+                with open(path) as f:
+                    config_dict = json.load(f)
             else:
                 raise RuntimeError("Unsupported file extension: {0}".format(conf))
 
@@ -222,7 +224,8 @@ def load_secrets_file(config_dict: dict, secrets_path: str = None, env_name: str
 
     if os.path.isfile(secrets_path):
         try:
-            secrets = yaml.safe_load(open(secrets_path))
+            with open(secrets_path) as f:
+                secrets = yaml.safe_load(f)
         except Exception as e:
             raise RuntimeError("Failed to open secrets configuration {0}: {1}".format(secrets_path, str(e)))
         template = Template(template)
